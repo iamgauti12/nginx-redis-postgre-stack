@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgre
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgre-config
+  namespace: postgre
+data:
+  POSTGRES_DB: postgres
+  POSTGRES_USER: postgres
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgre
+  namespace: postgre
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgre
+  template:
+    metadata:
+      labels:
+        app: postgre
+    spec:
+      containers:
+        - name: postgre
+          image: postgres:13
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgre-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgre-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgre-secret
+                  key: POSTGRES_PASSWORD
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgre
+  namespace: postgre
+spec:
+  type: ClusterIP
+  selector:
+    app: postgre
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
